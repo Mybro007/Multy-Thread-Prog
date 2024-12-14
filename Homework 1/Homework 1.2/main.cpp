@@ -3,10 +3,7 @@
 #include<Windows.h>
 #include<vector>
 
-void foo1(int qth);
-void foo2(int qth);
-void foo3(int qth);
-void foo4(int qth);
+void foo(std::vector<int> v1, std::vector<int> v2, std::vector<int>& answ, int startind, int endind);
 
 int main()
 {
@@ -24,103 +21,37 @@ int main()
 		std::cout << qth << " streams: ";
 		
 		std::vector<std::thread> threads(qth);
-		for (int j = 0; j < 4; j++)
+		int q = 1000;
+		while(q<=1000000)
 		{
-			if (j == 0)
+			int dsize = q / qth;
+			int curind = 0;
+			std::vector<int> v1(q);
+			std::vector<int> v2(q);
+			std::vector<int> answ(q);
+			auto start = std::chrono::steady_clock::now();
+			for (int i = 0; i < threads.size(); i++)
 			{
-				auto start = std::chrono::steady_clock::now();
-				for (int i = 0; i < threads.size(); i++)
-				{
-					threads[i] = std::thread(foo1, qth);
-					threads[i].join();
-				}
-				auto end = std::chrono::steady_clock::now();
-				std::chrono::duration<double> elapsedSeconds = end - start;
-				std::cout << elapsedSeconds.count() << "\t";
+				threads[i] = std::thread(foo, v1, v2, std::ref(answ), curind, (curind+dsize-1));
+				curind += dsize;
+				threads[i].join();
 			}
-			else if (j == 1)
-			{
-				auto start = std::chrono::steady_clock::now();
-				for (int i = 0; i < threads.size(); i++)
-				{
-					threads[i] = std::thread(foo2, qth);
-					threads[i].join();
-				}
-				auto end = std::chrono::steady_clock::now();
-				std::chrono::duration<double> elapsedSeconds = end - start;
-				std::cout << elapsedSeconds.count() << "\t";
-			}
-			else if (j == 2)
-			{
-				auto start = std::chrono::steady_clock::now();
-				for (int i = 0; i < threads.size(); i++)
-				{
-					threads[i] = std::thread(foo3, qth);
-					threads[i].join();
-				}
-				auto end = std::chrono::steady_clock::now();
-				std::chrono::duration<double> elapsedSeconds = end - start;
-				std::cout << elapsedSeconds.count() << "\t";
-			}
-			else
-			{
-				auto start = std::chrono::steady_clock::now();
-				for (int i = 0; i < threads.size(); i++)
-				{
-					threads[i] = std::thread(foo4, qth);
-					threads[i].join();
-				}
-				auto end = std::chrono::steady_clock::now();
-				std::chrono::duration<double> elapsedSeconds = end - start;
-				std::cout << elapsedSeconds.count() << "\t" << "\n";
-			}
+			auto end = std::chrono::steady_clock::now();
+			std::chrono::duration<double> elapsedSeconds = end - start;
+			std::cout << elapsedSeconds.count() << "\t";
+			q *= 10;
 		}
+		std::cout << "\n";
 		qth *= 2;
 	}
 	
 	return 0;
 }
 
-void foo1(int qth)
+void foo(std::vector<int> v1, std::vector<int> v2, std::vector<int>& answ, int startind, int endind)
 {
-	int size = 1000/qth;
-	std::vector<int> v1(size);
-	std::vector<int> v2(size);
-	for (int i = 0; i < size; i++)
+	for (int i = startind; i <= endind; i++)
 	{
-		v1[i] += v2[i];
-	}
-}
-
-void foo2(int qth)
-{
-	int size = 10000/qth;
-	std::vector<int> v1(size);
-	std::vector<int> v2(size);
-	for (int i = 0; i < size; i++)
-	{
-		v1[i] += v2[i];
-	}
-}
-
-void foo3(int qth)
-{
-	int size = 100000/qth;
-	std::vector<int> v1(size);
-	std::vector<int> v2(size);
-	for (int i = 0; i < size; i++)
-	{
-		v1[i] += v2[i];
-	}
-}
-
-void foo4(int qth)
-{
-	int size = 100000/qth;
-	std::vector<int> v1(size);
-	std::vector<int> v2(size);
-	for (int i = 0; i < size; i++)
-	{
-		v1[i] += v2[i];
+		answ[i] = v1[i] + v2[i];
 	}
 }
