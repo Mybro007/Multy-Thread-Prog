@@ -9,24 +9,25 @@
 std::mutex printMutex;  // Мьютекс для синхронизации вывода
 
 // Функция для имитации работы потока
-void calculate(int threadNumber, int totalTime, int totalSteps) {
+void calculate(int threadNumber, int totalSteps) {
     auto start = std::chrono::high_resolution_clock::now();  // Засекаем время начала работы потока
 
-    //int stepDuration = totalTime / totalSteps;  // Время для одного шага
-
+    // Задержка для имитации работы
     for (int i = 0; i < totalSteps; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));  // Задержка для имитации работы
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         // Блокировка для синхронизации вывода
         {
             std::lock_guard<std::mutex> lock(printMutex);
 
-            // Для каждого потока выводим его порядковый номер и уникальный id
-            std::cout << "\r" << std::setw(2) << threadNumber
-                << "   " << std::setw(16) << std::this_thread::get_id()
-                << "   ";
+            // Переход на нужную строку для потока
+            std::cout << "\033[" << threadNumber + 3 << ";0H"; // Перемещение курсора на нужную строку
 
-            // Заполняем прогресс-бар для текущего потока
+            // Отображение прогресс-бара для текущего потока
+            std::cout << std::setw(2) << threadNumber << "   "
+                << std::setw(16) << std::this_thread::get_id()
+                << "  ";
+
             for (int j = 0; j <= i; ++j) {
                 std::cout << char(219);  // Используем символ для закрашивания
             }
@@ -36,9 +37,6 @@ void calculate(int threadNumber, int totalTime, int totalSteps) {
 
             // Печатаем отступ перед временем
             std::cout << " ";
-
-            // Обновляем вывод
-            std::flush(std::cout);
         }
     }
 
@@ -46,9 +44,13 @@ void calculate(int threadNumber, int totalTime, int totalSteps) {
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
 
-    //Печатаем время работы потока
-    std::cout << " " << std::setw(10) << std::fixed << std::setprecision(2) << duration.count() << " sec" << "\n";
-
+    // Блокируем вывод времени потока
+    {
+        std::lock_guard<std::mutex> lock(printMutex);
+        // Переход на строку для вывода времени работы
+        std::cout << "\033[" << threadNumber + 3 << ";" << totalSteps + 22 << "H"; // Возвращаемся к нужной строке
+        std::cout << " " << std::setw(10) << std::setprecision(2) << duration.count() << " sec" << "\n";
+    }
 }
 
 int main() {
@@ -56,20 +58,24 @@ int main() {
 
     std::cout << "Enter the number of threads: ";
     std::cin >> numThreads;
-    std::cout << "Enter the total time for each thread (in milliseconds): ";
-    std::cin >> totalTime;
 
     int totalSteps = 44;
 
+    // Вывод заголовка
     std::cout << std::setw(2) << "#" << "   "
         << std::setw(16) << "id" << "   "
         << std::setw(25) << "Progress Bar" << "   "
         << std::setw(28) << "Time" << std::endl;
 
+    // Инициализация и запуск потоков
     std::vector<std::thread> threads;
     for (int i = 0; i < numThreads; ++i) {
-        threads.push_back(std::thread(calculate, i, totalTime, totalSteps));
-        threads[i].join();
+        threads.push_back(std::thread(calculate, i, totalSteps));
+    }
+
+    // Ожидание завершения всех потоков
+    for (auto& th : threads) {
+        th.join();
     }
 
     std::cout << "\nAll threads have finished." << std::endl;
